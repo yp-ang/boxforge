@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Annotate — {{ project.name }}</title>
+  <link rel="stylesheet" href="/static/annotate.css">
+</head>
+<body class="annotate-body" data-project-id="{{ project.id }}">
+  <div id="annotate-root">
+    <div class="canvas-pane">
+      <canvas id="canvas"></canvas>
+    </div>
+    <aside class="side-pane">
+      <h2>Labels</h2>
+      <ul id="label-list" class="label-list"></ul>
+
+      <h2>Boxes (<span id="box-count">0</span>)</h2>
+      <ul id="box-list" class="box-list"></ul>
+
+      <div class="conf-row">reviewed: <span id="reviewed-indicator">no</span></div>
+    </aside>
+  </div>
+  <footer id="toolbar">
+    <button id="prev-btn" title="A / ←">◀ prev</button>
+    <span id="position">– / –</span>
+    <button id="next-btn" title="D / →">next ▶</button>
+    <button id="skip-btn" title="S">skip</button>
+    <button id="delete-btn" title="Backspace">⌫ delete</button>
+    <span id="save-indicator"></span>
+  </footer>
+  <script src="/static/annotate.js"></script>
+</body>
+</html>

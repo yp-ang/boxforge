@@ -43,6 +43,7 @@ class ImageOut(BaseModel):
     height: int
     status: str
     ingested_at: datetime
+    reviewed_at: datetime | None = None
 
 
 class IngestRequest(BaseModel):
@@ -62,4 +63,36 @@ class StatsOut(BaseModel):
     pending: int
     annotated: int
     skipped: int
+    reviewed: int
     boxes_per_label: dict[str, int]
+
+
+class BoxIn(BaseModel):
+    label_id: int
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+
+
+class AnnotationsIn(BaseModel):
+    boxes: list[BoxIn]
+
+
+class AnnotationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    label_id: int
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+    source: str
+
+
+class ImageDetailOut(BaseModel):
+    image: ImageOut
+    annotations: list[AnnotationOut]
+    index: int
+    total: int

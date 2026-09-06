@@ -49,6 +49,11 @@ def project_stats(project_id: int, db: Session = Depends(get_db)):
         select(func.count()).select_from(Image).where(Image.project_id == project_id)
     ) or 0
 
+    reviewed = db.scalar(
+        select(func.count()).select_from(Image)
+        .where(Image.project_id == project_id, Image.reviewed_at.is_not(None))
+    ) or 0
+
     rows = db.execute(
         select(Label.name, func.count(Annotation.id))
         .outerjoin(Annotation, Annotation.label_id == Label.id)
@@ -61,5 +66,6 @@ def project_stats(project_id: int, db: Session = Depends(get_db)):
         pending=count("pending"),
         annotated=count("annotated"),
         skipped=count("skipped"),
+        reviewed=reviewed,
         boxes_per_label={name: n for name, n in rows},
     )

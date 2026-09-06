@@ -1,0 +1,130 @@
+.annotate-body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: system-ui, sans-serif;
+  background: #1e1e1e;
+  color: #eee;
+}
+
+#annotate-root {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.canvas-pane {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  background: #111;
+}
+
+#canvas {
+  cursor: crosshair;
+}
+
+.side-pane {
+  width: 260px;
+  padding: 0.75em;
+  overflow-y: auto;
+  background: #262626;
+  box-sizing: border-box;
+}
+
+.side-pane h2 {
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #999;
+  margin: 1em 0 0.4em;
+}
+
+.label-list, .box-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.label-list li, .box-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.3em 0.4em;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.label-list li.active {
+  background: #3a3a3a;
+}
+
+.box-list li.selected {
+  background: #3a3a3a;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.key-hint {
+  margin-left: auto;
+  color: #777;
+  font-size: 0.85em;
+}
+
+.box-list .del {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+.conf-row {
+  margin-top: 1em;
+  font-size: 0.85em;
+  color: #999;
+}
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  padding: 0.5em 1em;
+  background: #262626;
+  border-top: 1px solid #333;
+}
+
+#toolbar button {
+  background: #3a3a3a;
+  color: #eee;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 0.4em 0.8em;
+  cursor: pointer;
+}
+
+#toolbar button:hover {
+  background: #444;
+}
+
+#position {
+  font-variant-numeric: tabular-nums;
+}
+
+#save-indicator {
+  margin-left: auto;
+  color: #6a6;
+  font-size: 0.85em;
+  min-height: 1em;
+}

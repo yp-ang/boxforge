@@ -50,6 +50,7 @@ class Image(Base):
     height: Mapped[int]
     status: Mapped[str] = mapped_column(default="pending", index=True)
     ingested_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(default=None)
 
     project: Mapped["Project"] = relationship(back_populates="images")
     annotations: Mapped[list["Annotation"]] = relationship(back_populates="image",
