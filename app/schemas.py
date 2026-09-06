@@ -249,3 +249,64 @@ class PrelabelBatchOut(BaseModel):
     model_id: int
     conf: float
     images: list[PrelabelBatchImageOut]
+
+
+# --- step 08: faces -----------------------------------------------------------------
+
+class FaceIdentityCreate(BaseModel):
+    name: str
+    notes: str | None = None
+
+
+class FaceIdentityOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    notes: str | None = None
+    created_at: datetime
+    embedding_count: int = 0
+
+
+class FaceEmbeddingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    identity_id: int
+    source_image: str
+    created_at: datetime
+
+
+class FaceIdentityDetailOut(BaseModel):
+    identity: FaceIdentityOut
+    embeddings: list[FaceEmbeddingOut]
+
+
+class FaceUploadItemOut(BaseModel):
+    filename: str
+    ok: bool
+    detail: str
+    embedding_id: int | None = None
+
+
+class FaceUploadReportOut(BaseModel):
+    items: list[FaceUploadItemOut]
+
+
+class FaceModelsStatusOut(BaseModel):
+    ready: bool
+
+
+class FaceDetectionOut(BaseModel):
+    bbox: list[float]
+    score: float
+    identity_id: int | None
+    name: str
+    similarity: float
+
+
+class FacePredictImageOut(BaseModel):
+    width: int
+    height: int
+    image: str
+    faces: list[FaceDetectionOut]

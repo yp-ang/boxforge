@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Faces</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/verify.css">
+  <link rel="stylesheet" href="/static/faces.css">
+</head>
+<body class="faces-body">
+  <h1>Faces</h1>
+  <p><a href="/">← projects</a></p>
+  <p class="hint">
+    Face <em>detection</em> ("is there a face") is just another object class — see step
+    07. This page is face <em>recognition</em> ("whose face is it"): a separate
+    detect → align → embed → nearest-neighbour pipeline against a gallery you build
+    here. Read ARCHITECTURE §5.4 before pointing it at anyone but yourself — face
+    recognition is regulated biometric processing in several jurisdictions, and the
+    pretrained weights below are non-commercial-use only.
+  </p>
+
+  <section id="models-section">
+    <h2>Detection + embedding models</h2>
+    <p id="models-status" class="hint">checking…</p>
+    <button id="download-btn" type="button" hidden>Download SCRFD + ArcFace (~190MB)</button>
+    <p id="download-error" class="error" hidden></p>
+  </section>
+
+  <section>
+    <h2>Identities</h2>
+    <form id="identity-form">
+      <input id="identity-name" type="text" placeholder="name" required>
+      <input id="identity-notes" type="text" placeholder="notes (optional)">
+      <button type="submit">Add identity</button>
+    </form>
+    <table id="identity-table">
+      <thead><tr><th>name</th><th>notes</th><th>reference photos</th><th></th></tr></thead>
+      <tbody id="identity-rows"></tbody>
+    </table>
+  </section>
+
+  <section id="identity-detail" hidden>
+    <h2>Reference photos — <span id="detail-name"></span></h2>
+    <p class="hint">5–10 photos, varied pose/lighting/expression. Each must show exactly one face.</p>
+    <input id="photo-files" type="file" accept="image/*" multiple>
+    <button id="upload-btn" type="button">Embed</button>
+    <pre id="upload-report" hidden></pre>
+    <div id="photo-grid" class="photo-grid"></div>
+  </section>
+
+  <section>
+    <h2>Test</h2>
+    <div class="controls">
+      <label>detection confidence
+        <input id="det-conf-slider" type="range" min="0.1" max="0.95" step="0.01" value="0.5">
+        <span id="det-conf-value">0.50</span>
+      </label>
+      <label>match threshold
+        <input id="match-slider" type="range" min="0.1" max="0.7" step="0.01" value="0.35">
+        <span id="match-value">0.35</span>
+      </label>
+    </div>
+
+    <nav class="tabs">
+      <button type="button" class="tab-btn active" data-tab="image">Image</button>
+      <button type="button" class="tab-btn" data-tab="webcam">Webcam</button>
+    </nav>
+
+    <section id="tab-image" class="tab-panel">
+      <input id="image-file" type="file" accept="image/*">
+      <p id="image-error" class="error" hidden></p>
+      <div class="canvas-wrap"><canvas id="image-canvas"></canvas></div>
+    </section>
+
+    <section id="tab-webcam" class="tab-panel" hidden>
+      <button id="webcam-start" type="button">Start webcam</button>
+      <button id="webcam-stop" type="button" disabled>Stop</button>
+      <span id="webcam-status" class="hint"></span>
+      <div class="canvas-wrap">
+        <video id="webcam-video" autoplay playsinline muted hidden></video>
+        <canvas id="webcam-canvas"></canvas>
+      </div>
+    </section>
+  </section>
+
+  <section>
+    <h2>Export</h2>
+    <p class="hint">SCRFD + ArcFace ONNX plus gallery.npz — enough for other software to run the same pipeline.</p>
+    <a id="export-link" href="/api/faces/export">Download faces-export.zip</a>
+  </section>
+
+  <script src="/static/faces.js"></script>
+</body>
+</html>

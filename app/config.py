@@ -22,13 +22,15 @@ class Settings(BaseSettings):
     def models_dir(self) -> Path:  return self.data_dir / "models"
     @property
     def pretrained_dir(self) -> Path: return self.data_dir / "pretrained"
+    @property
+    def faces_dir(self) -> Path:   return self.data_dir / "faces"
 
     def resolved_db_url(self) -> str:
         return self.db_url or f"sqlite:///{(self.data_dir / 'app.db').resolve()}"
 
     def ensure_dirs(self) -> None:
         for d in (self.images_dir, self.datasets_dir, self.runs_dir, self.models_dir,
-                  self.pretrained_dir):
+                  self.pretrained_dir, self.faces_dir):
             d.mkdir(parents=True, exist_ok=True)
 
 

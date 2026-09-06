@@ -138,6 +138,13 @@ class FaceIdentity(Base):
     notes: Mapped[Optional[str]] = mapped_column(Text, default=None)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
+    # ORM-level cascade, not just the DB's ON DELETE CASCADE below — same pattern as
+    # Project.labels/images. Deleting an identity must reliably take its embeddings
+    # with it (ARCHITECTURE §5.4: deletability is a feature here), regardless of
+    # whether the connection in use has SQLite's FK-enforcement pragma turned on.
+    embeddings: Mapped[list["FaceEmbedding"]] = relationship(back_populates="identity",
+                                                              cascade="all, delete-orphan")
+
 
 class FaceEmbedding(Base):
     __tablename__ = "face_embeddings"
@@ -147,3 +154,5 @@ class FaceEmbedding(Base):
     vector_blob: Mapped[bytes] = mapped_column(LargeBinary)
     source_image: Mapped[str]
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    identity: Mapped["FaceIdentity"] = relationship(back_populates="embeddings")

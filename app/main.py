@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db import SessionLocal, get_db, init_db
 from app.models import Project
-from app.routers import annotations, datasets, images, inference, labels, prelabel, projects, training
+from app.routers import annotations, datasets, faces, images, inference, labels, prelabel, projects, training
 from app.services.jobs import reconcile_jobs
 
 
@@ -35,6 +35,7 @@ app.include_router(datasets.router)
 app.include_router(training.router)
 app.include_router(inference.router)
 app.include_router(prelabel.router)
+app.include_router(faces.router)
 
 
 @app.get("/health")
@@ -76,3 +77,8 @@ def prelabel_page(request: Request, project_id: int, db: Session = Depends(get_d
     if not project:
         raise HTTPException(404, "project not found")
     return templates.TemplateResponse(request, "prelabel.html", {"project": project})
+
+
+@app.get("/faces")
+def faces_page(request: Request):
+    return templates.TemplateResponse(request, "faces.html", {})
