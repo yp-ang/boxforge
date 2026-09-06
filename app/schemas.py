@@ -96,3 +96,34 @@ class ImageDetailOut(BaseModel):
     annotations: list[AnnotationOut]
     index: int
     total: int
+
+
+class DatasetExportRequest(BaseModel):
+    val_pct: int = 20
+    force: bool = False
+
+
+class PreflightReportOut(BaseModel):
+    errors: list[str]
+    warnings: list[str]
+    per_class: dict[str, int]
+    n_train: int
+    n_val: int
+
+
+class DatasetOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    dir_path: str
+    val_pct: int
+    n_train: int
+    n_val: int
+    created_at: datetime
+
+
+class DatasetExportOut(BaseModel):
+    dataset_id: int | None
+    path: str | None
+    report: PreflightReportOut

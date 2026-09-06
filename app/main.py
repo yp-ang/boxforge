@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db import get_db, init_db
 from app.models import Project
-from app.routers import annotations, images, labels, projects
+from app.routers import annotations, datasets, images, labels, projects
 
 
 @asynccontextmanager
@@ -25,6 +25,7 @@ app.include_router(projects.router)
 app.include_router(labels.router)
 app.include_router(images.router)
 app.include_router(annotations.router)
+app.include_router(datasets.router)
 
 
 @app.get("/health")

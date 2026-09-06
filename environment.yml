@@ -12,6 +12,7 @@ dependencies:
       - sqlalchemy>=2.0
       - pydantic-settings
       - jinja2
+      - pyyaml               # dataset export writes data.yaml
       - python-multipart      # file uploads
       - onnxruntime           # inference; CPU + CoreML EP on macOS
       - ultralytics           # training only — see ARCHITECTURE §5.1

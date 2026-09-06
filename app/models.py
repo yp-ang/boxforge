@@ -74,6 +74,19 @@ class Annotation(Base):
     image: Mapped["Image"] = relationship(back_populates="annotations")
 
 
+class Dataset(Base):
+    __tablename__ = "datasets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
+    dir_path: Mapped[str]
+    val_pct: Mapped[int]
+    n_train: Mapped[int]
+    n_val: Mapped[int]
+    manifest_json: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+
 class Job(Base):
     __tablename__ = "jobs"
 
