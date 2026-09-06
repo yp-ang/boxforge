@@ -6,14 +6,20 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db import get_db, init_db
+from app.db import SessionLocal, get_db, init_db
 from app.models import Project
-from app.routers import annotations, datasets, images, labels, projects
+from app.routers import annotations, datasets, images, labels, projects, training
+from app.services.jobs import reconcile_jobs
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    # A job whose process died while the server was down is still 'running' in the DB.
+    # Settle that before anyone can look at the UI, or the one-job-at-a-time check will
+    # refuse every new run on behalf of a process that no longer exists.
+    with SessionLocal() as db:
+        reconcile_jobs(db)
     yield
 
 
@@ -26,6 +32,7 @@ app.include_router(labels.router)
 app.include_router(images.router)
 app.include_router(annotations.router)
 app.include_router(datasets.router)
+app.include_router(training.router)
 
 
 @app.get("/health")
@@ -43,3 +50,11 @@ def annotate_page(request: Request, project_id: int, db: Session = Depends(get_d
     if not project:
         raise HTTPException(404, "project not found")
     return templates.TemplateResponse(request, "annotate.html", {"project": project})
+
+
+@app.get("/train/{project_id}")
+def train_page(request: Request, project_id: int, db: Session = Depends(get_db)):
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, "project not found")
+    return templates.TemplateResponse(request, "train.html", {"project": project})

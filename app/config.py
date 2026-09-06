@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,12 +20,15 @@ class Settings(BaseSettings):
     def runs_dir(self) -> Path:    return self.data_dir / "runs"
     @property
     def models_dir(self) -> Path:  return self.data_dir / "models"
+    @property
+    def pretrained_dir(self) -> Path: return self.data_dir / "pretrained"
 
     def resolved_db_url(self) -> str:
         return self.db_url or f"sqlite:///{(self.data_dir / 'app.db').resolve()}"
 
     def ensure_dirs(self) -> None:
-        for d in (self.images_dir, self.datasets_dir, self.runs_dir, self.models_dir):
+        for d in (self.images_dir, self.datasets_dir, self.runs_dir, self.models_dir,
+                  self.pretrained_dir):
             d.mkdir(parents=True, exist_ok=True)
 
 

@@ -97,8 +97,10 @@ class Job(Base):
     params_json: Mapped[Optional[str]] = mapped_column(Text, default=None)
     log_path: Mapped[Optional[str]] = mapped_column(default=None)
     result_json: Mapped[Optional[str]] = mapped_column(Text, default=None)
+    pid: Mapped[Optional[int]] = mapped_column(default=None)
     started_at: Mapped[Optional[datetime]] = mapped_column(default=None)
     ended_at: Mapped[Optional[datetime]] = mapped_column(default=None)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
 
 class Model(Base):
@@ -108,10 +110,14 @@ class Model(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
     job_id: Mapped[Optional[int]] = mapped_column(ForeignKey("jobs.id", ondelete="SET NULL"),
                                                    default=None)
+    dataset_id: Mapped[Optional[int]] = mapped_column(ForeignKey("datasets.id", ondelete="SET NULL"),
+                                                       default=None)
     name: Mapped[str]
     dir_path: Mapped[str]
+    run_dir: Mapped[Optional[str]] = mapped_column(default=None)   # ultralytics output: plots, csv
     classes_json: Mapped[str] = mapped_column(Text)
     metrics_json: Mapped[Optional[str]] = mapped_column(Text, default=None)
+    is_active: Mapped[bool] = mapped_column(default=False)         # the one step 06/07 default to
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
 

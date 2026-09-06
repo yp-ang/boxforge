@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Train — {{ project.name }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/train.css">
+</head>
+<body class="train-body" data-project-id="{{ project.id }}">
+  <h1>Train — {{ project.name }}</h1>
+  <p><a href="/">← projects</a> · <a href="/annotate/{{ project.id }}">annotate →</a></p>
+
+  <section>
+    <h2>Dataset</h2>
+    <select id="dataset-select"></select>
+    <button id="export-btn" type="button">Export a new one</button>
+    <pre id="export-report" hidden></pre>
+  </section>
+
+  <section>
+    <h2>Run</h2>
+    <form id="train-form" class="config-grid">
+      <label>model <select id="cfg-model"></select></label>
+      <label>epochs <input id="cfg-epochs" type="number" value="100" min="1" max="2000"></label>
+      <label>imgsz <input id="cfg-imgsz" type="number" value="640" min="64" max="2560" step="32"></label>
+      <label>batch <input id="cfg-batch" type="number" value="-1" min="-1" max="256"></label>
+      <label>patience <input id="cfg-patience" type="number" value="30" min="0" max="2000"></label>
+      <label>device
+        <select id="cfg-device">
+          <option value="auto">auto</option>
+          <option value="mps">mps</option>
+          <option value="cpu">cpu</option>
+          <option value="0">cuda:0</option>
+        </select>
+      </label>
+      <label>seed <input id="cfg-seed" type="number" value="0"></label>
+      <label class="flip-row">
+        <input id="cfg-fliplr" type="checkbox" checked>
+        mirror horizontally (uncheck for text, gauges, signage)
+      </label>
+      <button id="train-btn" type="submit">Start training</button>
+    </form>
+    <p id="train-error" class="error" hidden></p>
+
+    <details id="preview-details">
+      <summary>Augmentation preview — check this before you spend an hour training</summary>
+      <p class="hint">
+        A mirrored forklift is still a forklift; a mirrored “7” is not. The right-hand
+        image of each pair is what the model actually trains on.
+      </p>
+      <button id="preview-btn" type="button">Render preview</button>
+      <p id="preview-note" class="hint" hidden></p>
+      <div id="preview-grid" class="preview-grid"></div>
+    </details>
+  </section>
+
+  <section id="job-section" hidden>
+    <h2>Job <span id="job-id"></span> — <span id="job-status">…</span></h2>
+    <button id="cancel-btn" type="button">Cancel</button>
+    <pre id="log"></pre>
+  </section>
+
+  <section>
+    <h2>Models</h2>
+    <table id="model-table">
+      <thead>
+        <tr>
+          <th></th><th>name</th><th>mAP50-95</th><th>mAP50</th><th>precision</th>
+          <th>recall</th><th>dataset</th><th>epochs</th><th>imgsz</th><th>trained</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="model-rows"></tbody>
+    </table>
+    <div id="model-detail" hidden></div>
+    <aside class="metric-key">
+      <p><strong>mAP50-95</strong> — the headline. &gt;0.5 is strong for a custom dataset,
+        0.3–0.5 is usable, &lt;0.2 means a data problem rather than a training problem.</p>
+      <p><strong>mAP50</strong> — looser IoU. High mAP50 with low mAP50-95 means the model
+        finds objects but its boxes are sloppy — usually inconsistent annotation tightness.</p>
+      <p><strong>Precision high, recall low</strong> — it misses objects. More data, or
+        more varied data.</p>
+      <p><strong>Recall high, precision low</strong> — false positives. Add background
+        images (annotated, zero boxes) showing the scenes where it fires wrongly.</p>
+    </aside>
+  </section>
+
+  <script src="/static/train.js"></script>
+</body>
+</html>

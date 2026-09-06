@@ -1,5 +1,6 @@
 const projectSelect = document.getElementById("project-select");
 const annotateLink = document.getElementById("annotate-link");
+const trainLink = document.getElementById("train-link");
 const projectForm = document.getElementById("project-form");
 const labelList = document.getElementById("label-list");
 const labelForm = document.getElementById("label-form");
@@ -35,6 +36,7 @@ async function refreshProject() {
   labelList.innerHTML = "";
   statsEl.textContent = "";
   annotateLink.href = id ? `/annotate/${id}` : "#";
+  trainLink.href = id ? `/train/${id}` : "#";
   if (!id) return;
 
   const stats = await (await fetch(`/api/projects/${id}/stats`)).json();

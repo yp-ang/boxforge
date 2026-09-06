@@ -18,3 +18,24 @@ dependencies:
       - ultralytics           # training only — see ARCHITECTURE §5.1
       - pytest
       - httpx                 # test client
+
+# --- Known environment hazard: duplicate OpenMP runtimes (macOS/conda) -------------
+#
+# conda-forge's opencv pulls in llvm-openmp (lib/libomp.dylib); pip's torch wheel ships
+# its own copy at site-packages/torch/lib/libomp.dylib and loads it via
+# @loader_path/libomp.dylib. Import both in one process and you get either
+#
+#     OMP: Error #15: Initializing libomp.dylib, but found libomp.dylib already initialized
+#
+# or, if KMP_DUPLICATE_LIB_OK=TRUE is set to silence that, a SIGSEGV partway through
+# building the model — no traceback, exit code 139. Do not set that variable; the error
+# is the useful half.
+#
+# After creating the env, point torch at the single conda copy:
+#
+#     ln -sf "$CONDA_PREFIX/lib/libomp.dylib" \
+#            "$CONDA_PREFIX/lib/python3.11/site-packages/torch/lib/libomp.dylib"
+#
+# Re-run it after any `pip install`/upgrade of torch, which restores the bundled copy.
+# The durable alternative is to take pytorch from conda-forge as well, so every native
+# library in the env comes from one channel with one OpenMP runtime.
