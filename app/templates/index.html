@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Machine ID</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <h1>Machine ID</h1>
+
+  <section>
+    <h2>Project</h2>
+    <select id="project-select"></select>
+    <form id="project-form">
+      <input id="project-name" type="text" placeholder="new project name" required>
+      <button type="submit">Create</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Labels</h2>
+    <ul id="label-list"></ul>
+    <form id="label-form">
+      <input id="label-name" type="text" placeholder="label name" required>
+      <input id="label-color" type="color" value="#ff3b30">
+      <button type="submit">Add label</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Ingest</h2>
+    <form id="ingest-form">
+      <input id="ingest-dir" type="text" placeholder="/path/to/folder" required style="width:24em">
+      <label><input id="ingest-copy" type="checkbox" checked> copy (uncheck to symlink)</label>
+      <button type="submit">Ingest</button>
+    </form>
+    <pre id="ingest-report"></pre>
+  </section>
+
+  <section>
+    <h2>Stats</h2>
+    <pre id="stats"></pre>
+  </section>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

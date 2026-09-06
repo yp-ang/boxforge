@@ -1,0 +1,19 @@
+name: machine-id
+channels: [conda-forge]
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pillow
+  - opencv                 # conda-forge build; avoids the opencv-python wheel mess
+  - pip:
+      - fastapi
+      - "uvicorn[standard]"
+      - sqlalchemy>=2.0
+      - pydantic-settings
+      - jinja2
+      - python-multipart      # file uploads
+      - onnxruntime           # inference; CPU + CoreML EP on macOS
+      - ultralytics           # training only — see ARCHITECTURE §5.1
+      - pytest
+      - httpx                 # test client
