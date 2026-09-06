@@ -13,6 +13,7 @@ const prevBtn = document.getElementById("prev-btn");
 const nextBtn = document.getElementById("next-btn");
 const skipBtn = document.getElementById("skip-btn");
 const deleteBtn = document.getElementById("delete-btn");
+const orderSelect = document.getElementById("order-select");
 
 let labels = [];               // [{id, name, color, class_index}]
 let activeLabelId = null;      // persists across images
@@ -50,7 +51,7 @@ function labelById(id) {
 }
 
 async function fetchNext(after, direction) {
-  const params = new URLSearchParams({ direction });
+  const params = new URLSearchParams({ direction, order: orderSelect.value });
   if (after !== null && after !== undefined) params.set("after", after);
   const res = await fetch(`/api/projects/${projectId}/next?${params}`);
   if (!res.ok) return null;
@@ -58,7 +59,7 @@ async function fetchNext(after, direction) {
 }
 
 function cacheKeyFor(afterId) {
-  return `${afterId}:next`;
+  return `${afterId}:next:${orderSelect.value}`;
 }
 
 function prefetchNext() {
@@ -247,7 +248,12 @@ function drawBox(box, selected) {
   ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
+  // Dashed = drafted by the model, not yet reviewed (step 07 §2). Saving the image
+  // flips every box to source="human" server-side, so this is purely a "have I looked
+  // at this yet" signal, not a permanent style.
+  if (box.source === "model") ctx.setLineDash([5, 4]);
   ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+  ctx.setLineDash([]);
 
   if (selected) {
     ctx.save();
@@ -377,7 +383,7 @@ function renderBoxList() {
     swatch.className = "swatch";
     swatch.style.background = label ? label.color : "#999";
     const text = document.createElement("span");
-    text.textContent = label ? label.name : `#${box.label_id}`;
+    text.textContent = (label ? label.name : `#${box.label_id}`) + (box.source === "model" ? " (draft)" : "");
     const del = document.createElement("button");
     del.className = "del";
     del.textContent = "✕";
@@ -585,6 +591,11 @@ window.addEventListener("keydown", (e) => {
 
 window.addEventListener("keyup", (e) => {
   if (e.code === "Space") spaceHeld = false;
+});
+
+orderSelect.addEventListener("change", () => {
+  nextCache = null;
+  goTo("next");
 });
 
 prevBtn.addEventListener("click", () => goTo("prev"));

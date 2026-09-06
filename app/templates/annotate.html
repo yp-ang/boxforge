@@ -11,6 +11,15 @@
       <canvas id="canvas"></canvas>
     </div>
     <aside class="side-pane">
+      <h2>Review order</h2>
+      <select id="order-select">
+        <option value="id">ingest order</option>
+        <option value="uncertain">most uncertain first</option>
+        <option value="empty">zero detections first</option>
+        <option value="dense">most detections first</option>
+      </select>
+      <p class="hint"><a href="/prelabel/{{ project.id }}">pre-label / grid review →</a></p>
+
       <h2>Labels</h2>
       <ul id="label-list" class="label-list"></ul>
 

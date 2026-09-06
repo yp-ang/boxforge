@@ -51,6 +51,9 @@ class Image(Base):
     status: Mapped[str] = mapped_column(default="pending", index=True)
     ingested_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     reviewed_at: Mapped[Optional[datetime]] = mapped_column(default=None)
+    # Step 07: mean(1 - confidence) over a prelabel run's detections, or 0.9 as a sentinel
+    # for "found nothing" (doc §4). None means never prelabelled — sorts last, not first.
+    uncertainty: Mapped[Optional[float]] = mapped_column(default=None)
 
     project: Mapped["Project"] = relationship(back_populates="images")
     annotations: Mapped[list["Annotation"]] = relationship(back_populates="image",

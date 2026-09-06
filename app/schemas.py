@@ -44,6 +44,7 @@ class ImageOut(BaseModel):
     status: str
     ingested_at: datetime
     reviewed_at: datetime | None = None
+    uncertainty: float | None = None
 
 
 class IngestRequest(BaseModel):
@@ -215,3 +216,36 @@ class AugmentPreviewItem(BaseModel):
 class AugmentPreviewOut(BaseModel):
     items: list[AugmentPreviewItem]
     note: str | None = None
+
+
+class PrelabelRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    model_id: int
+    conf: float = Field(0.4, ge=0.0, le=1.0)
+    limit: int = Field(500, ge=1, le=5000)
+
+
+class PrelabelPreviewOut(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    eligible: int
+    model_id: int
+    conf: float
+
+
+class UndoPrelabelOut(BaseModel):
+    deleted_annotations: int
+    images_reset: int
+
+
+class PrelabelBatchImageOut(BaseModel):
+    image: ImageOut
+    annotations: list[AnnotationOut]
+
+
+class PrelabelBatchOut(BaseModel):
+    job_id: int
+    model_id: int
+    conf: float
+    images: list[PrelabelBatchImageOut]

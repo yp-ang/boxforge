@@ -1,0 +1,47 @@
+body.prelabel-body { max-width: 60em; }
+
+#batch-table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin-top: 0.5em; }
+#batch-table th, #batch-table td { text-align: left; padding: 0.35em 0.5em; border-bottom: 1px solid #ddd; }
+
+.prelabel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12em, 1fr));
+  gap: 0.75em;
+  margin-top: 0.75em;
+}
+
+.pl-tile {
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #111;
+}
+
+.pl-tile.focused { border-color: #4285f4; }
+.pl-tile.rejecting { opacity: 0.3; }
+
+.pl-tile canvas { display: block; width: 100%; height: auto; }
+
+.pl-tile .pl-actions {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 0.2em 0.4em;
+}
+
+.pl-tile button {
+  border: none;
+  border-radius: 3px;
+  padding: 0.15em 0.5em;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.pl-accept { background: #1f7a1f; color: #fff; }
+.pl-reject { background: #c0271a; color: #fff; }

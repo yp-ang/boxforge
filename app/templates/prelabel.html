@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pre-label — {{ project.name }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/train.css">
+  <link rel="stylesheet" href="/static/prelabel.css">
+</head>
+<body class="prelabel-body" data-project-id="{{ project.id }}">
+  <h1>Pre-label — {{ project.name }}</h1>
+  <p><a href="/">← projects</a> · <a href="/annotate/{{ project.id }}">annotate →</a> ·
+    <a href="/train/{{ project.id }}">train →</a></p>
+  <p class="hint">
+    Draft boxes with a trained model on pending, un-annotated images, then correct
+    instead of drawing from scratch. Drafts are dashed in the annotator and never count
+    as training data until a human saves the image.
+  </p>
+
+  <section>
+    <h2>Run a batch</h2>
+    <form id="prelabel-form" class="config-grid">
+      <label>model <select id="pl-model"></select></label>
+      <label>confidence
+        <input id="pl-conf" type="range" min="0.05" max="0.95" step="0.01" value="0.4">
+        <span id="pl-conf-value">0.40</span>
+      </label>
+      <label>limit <input id="pl-limit" type="number" value="500" min="1" max="5000"></label>
+      <button id="pl-preview-btn" type="button">Preview count</button>
+      <button id="pl-start-btn" type="submit">Draft boxes</button>
+    </form>
+    <p id="pl-preview" class="hint"></p>
+    <p id="pl-error" class="error" hidden></p>
+  </section>
+
+  <section id="job-section" hidden>
+    <h2>Job <span id="job-id"></span> — <span id="job-status">…</span></h2>
+    <button id="cancel-btn" type="button">Cancel</button>
+    <pre id="log"></pre>
+  </section>
+
+  <section>
+    <h2>Batches</h2>
+    <table id="batch-table">
+      <thead><tr><th>job</th><th>model</th><th>conf</th><th>images</th><th>boxes</th>
+        <th>status</th><th></th></tr></thead>
+      <tbody id="batch-rows"></tbody>
+    </table>
+  </section>
+
+  <section id="grid-section" hidden>
+    <h2>Review batch <span id="grid-job-id"></span></h2>
+    <p class="hint">
+      space = accept focused · x = reject · arrow keys move focus · enter = open full
+      annotator for a from-scratch pass
+    </p>
+    <div id="grid" class="prelabel-grid"></div>
+    <p id="grid-empty" class="hint" hidden>Nothing left to review in this batch.</p>
+  </section>
+
+  <script src="/static/prelabel.js"></script>
+</body>
+</html>

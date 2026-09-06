@@ -26,6 +26,7 @@ from app.services.exporter import (
     export_onnx,
     parity_check,
 )
+from app.services.prelabel import DEFAULT_PRELABEL_CONF, prelabel
 from app.services.runtime import OnnxDetector as RuntimeOnnxDetector
 from app.services.runtime import draw_detections
 from app.services.trainer import TrainConfig, UltralyticsTrainer, write_model_folder
@@ -271,7 +272,47 @@ def run_predict_video(db, job: Job) -> dict:
     return {"model_id": model.id, "video": str(out_video), "frames": idx}
 
 
-HANDLERS = {"train": run_train, "export": run_export, "predict_video": run_predict_video}
+def run_prelabel(db, job: Job) -> dict:
+    """Step 07: draft boxes on pending, un-annotated images with the active/selected
+    model. Runs as a job for the same reason predict_video does — a few hundred images
+    through onnxruntime takes long enough to want the SSE log stream and cancel button
+    step 04 already built, rather than tying up a request."""
+    params = json.loads(job.params_json or "{}")
+    project = db.get(Project, job.project_id)
+    if project is None:
+        raise RuntimeError(f"project {job.project_id} no longer exists")
+
+    model = db.get(Model, params["model_id"])
+    if model is None:
+        raise RuntimeError(f"model {params.get('model_id')} no longer exists")
+    if not model.onnx_path or not Path(model.onnx_path).is_file():
+        raise RuntimeError(f"model {model.id} has no exported ONNX — run the step 05 export first")
+
+    conf = float(params.get("conf", DEFAULT_PRELABEL_CONF))
+    limit = int(params.get("limit", 500))
+
+    detector = RuntimeOnnxDetector(Path(model.dir_path))
+
+    def read_image(rel_path: str):
+        path = settings.images_dir / rel_path
+        frame = cv2.imread(str(path))
+        if frame is None:
+            raise RuntimeError(f"could not read image {path}")
+        return frame
+
+    log(f"pre-labelling project {project.id} with model {model.id} @ conf={conf}, "
+        f"up to {limit} images")
+    result = prelabel(db, project, detector, conf, limit, read_image)
+    log(f"drafted {result['n_boxes']} boxes across {result['n_images']} images")
+    if result["unmapped_classes"]:
+        log(f"skipped detections for classes not in this project's labels: "
+            f"{result['unmapped_classes']}")
+
+    return {"model_id": model.id, "conf": conf, **result}
+
+
+HANDLERS = {"train": run_train, "export": run_export, "predict_video": run_predict_video,
+            "prelabel": run_prelabel}
 
 
 def main(argv: list[str]) -> int:
