@@ -41,7 +41,7 @@ def _exported_model(db: Session, model_id: int) -> Model:
     model = db.get(Model, model_id)
     if not model:
         raise HTTPException(404, "model not found")
-    if not model.onnx_path or not Path(model.onnx_path).is_file():
+    if not model.onnx_path or not settings.data_path(model.onnx_path).is_file():
         raise HTTPException(400, f"model {model_id} has no exported ONNX — run the "
                                   "step 05 export first")
     return model
@@ -68,7 +68,7 @@ async def predict_image(model_id: int, file: UploadFile = File(...),
                         db: Session = Depends(get_db)):
     model = _exported_model(db, model_id)
     bgr = _decode_upload(await file.read())
-    detector = get_detector(model.id, Path(model.dir_path))
+    detector = get_detector(model.id, settings.data_path(model.dir_path))
     dets = await run_in_threadpool(detector.predict, bgr, PREDICT_FLOOR_CONF)
     h, w = bgr.shape[:2]
     return PredictImageOut(width=w, height=h, image=_jpeg_data_uri(bgr),
@@ -157,10 +157,10 @@ async def ws_predict(ws: WebSocket, model_id: int):
 
     with SessionLocal() as session:
         model = session.get(Model, model_id)
-        if not model or not model.onnx_path or not Path(model.onnx_path).is_file():
+        if not model or not model.onnx_path or not settings.data_path(model.onnx_path).is_file():
             await ws.close(code=4004, reason="model not found or not exported")
             return
-        model_dir = Path(model.dir_path)
+        model_dir = settings.data_path(model.dir_path)
 
     detector = get_detector(model_id, model_dir)
     conf, iou = settings.default_conf, 0.45

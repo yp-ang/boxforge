@@ -1,0 +1,6 @@
+# Additive on top of requirements-serve.txt (the `train` Docker stage extends `serve` —
+# see docker/Dockerfile), not a standalone list. This is what takes the image from
+# ~700MB past 3GB (ARCHITECTURE §9 / step 09 §1), so it stays out of the default image.
+ultralytics
+onnx
+onnxslim

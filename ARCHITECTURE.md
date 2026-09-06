@@ -202,6 +202,24 @@ annotating, which is the honest bound on a personal project — expect 200–600
 hour of human effort, which is exactly why step 07 (pre-labelling) matters more than it
 looks.
 
+### 5.6 Never run conda and Docker against the same `data/` at the same time
+
+Verified while building step 09: SQLite's WAL mode coordinates multiple processes
+through a shared-memory (`-shm`) segment, and that does not reliably survive Docker
+Desktop's virtiofs bind-mount boundary on macOS. Writing from a conda process on the
+host while the container is *already running* against the same bind-mounted `data/`
+produced a container view that silently missed the new rows, and in one run an
+in-progress WAL checkpoint on one side discarded frames the other side had just
+written — actual data loss, not just a stale read.
+
+The sequential workflow ARCHITECTURE already recommends (§5.3: train in conda, *then*
+serve in Docker) never hits this — a container started after conda finishes reads a
+consistent file from a clean state. The failure mode only shows up if both are pointed
+at the same `data/` concurrently. Practical rule: stop one before starting the other.
+If you ever do need both open at once, checkpoint explicitly first
+(`PRAGMA wal_checkpoint(TRUNCATE)`) and don't trust a long-running process to notice
+writes that land after it started.
+
 ## 6. Repo layout
 
 ```

@@ -250,7 +250,9 @@ def test_run_export_writes_metadata_and_flags_a_passing_parity(db_session, monke
 
     db_session.rollback()
     refreshed = db_session.get(Model, model.id)
-    assert refreshed.onnx_path == str(onnx_path)
+    # Step 09 §3: stored relative to data_dir, not as the absolute path export_onnx()
+    # happened to return in this process — see app.config.Settings.data_path().
+    assert settings.data_path(refreshed.onnx_path) == onnx_path
     assert refreshed.parity_status == "passed"
     assert json.loads(refreshed.parity_json)["passed"] is True
 

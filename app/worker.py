@@ -18,6 +18,7 @@ import cv2
 from app.config import settings
 from app.db import SessionLocal, init_db
 from app.models import Dataset, Job, Model, Project
+from app.services.dataset_export import materialise_data_yaml
 from app.services.exporter import (
     OnnxDetector,
     TorchDetector,
@@ -48,10 +49,13 @@ def run_train(db, job: Job) -> dict:
     if dataset is None or dataset.project_id != project.id:
         raise RuntimeError(f"dataset {params.get('dataset_id')} not found in this project")
 
-    dataset_dir = Path(dataset.dir_path)
-    dataset_yaml = dataset_dir / "data.yaml"
-    if not dataset_yaml.is_file():
-        raise RuntimeError(f"dataset yaml missing: {dataset_yaml}")
+    dataset_dir = settings.data_path(dataset.dir_path)
+    if not dataset_dir.is_dir():
+        raise RuntimeError(f"dataset directory missing: {dataset_dir}")
+    # Step 09 §3: never trust the path: key baked into data.yaml at export time — this
+    # process may be running in a different environment (conda vs. the Docker
+    # container's /app/data) than the one that exported it.
+    dataset_yaml = materialise_data_yaml(dataset_dir)
 
     cfg = TrainConfig(**params["config"])
     run_dir = settings.runs_dir / str(job.id) / "train"
@@ -79,7 +83,7 @@ def run_train(db, job: Job) -> dict:
         dataset_id=dataset.id,
         name=f"{Path(cfg.model).stem}-job{job.id}",
         dir_path="",                       # needs the row id; filled in below
-        run_dir=str(result.run_dir),
+        run_dir=settings.rel_data_path(result.run_dir),
         classes_json=json.dumps(names),
         metrics_json=json.dumps(result.metrics),
     )
@@ -104,7 +108,7 @@ def run_train(db, job: Job) -> dict:
             "metrics": result.metrics,
         },
     )
-    model.dir_path = str(model_dir)
+    model.dir_path = settings.rel_data_path(model_dir)
     db.commit()
 
     log(f"model {model.id} written to {model_dir}")
@@ -121,7 +125,7 @@ def _pick_parity_samples(dataset: Dataset | None, n: int) -> list[Path]:
     claim — and fall back to train images for a dataset too small to have a val split."""
     if dataset is None:
         return []
-    dataset_dir = Path(dataset.dir_path)
+    dataset_dir = settings.data_path(dataset.dir_path)
     for split in ("val", "train"):
         images = sorted((dataset_dir / "images" / split).glob("*"))
         if images:
@@ -136,11 +140,12 @@ def run_export(db, job: Job) -> dict:
         raise RuntimeError(f"model {params.get('model_id')} no longer exists")
     project = db.get(Project, model.project_id)
 
-    weights = Path(model.dir_path) / "best.pt"
+    model_dir = settings.data_path(model.dir_path)
+    weights = model_dir / "best.pt"
     if not weights.is_file():
         raise RuntimeError(f"model {model.id} has no weights on disk at {weights}")
 
-    metadata_path = Path(model.dir_path) / "metadata.json"
+    metadata_path = model_dir / "metadata.json"
     existing = json.loads(metadata_path.read_text()) if metadata_path.is_file() else {}
 
     imgsz = params.get("imgsz") or existing.get("imgsz") or settings.default_imgsz
@@ -150,7 +155,7 @@ def run_export(db, job: Job) -> dict:
 
     log(f"exporting model {model.id}: weights={weights} imgsz={imgsz} opset={opset} "
         f"dynamic={dynamic} nms={nms}")
-    onnx_path = export_onnx(weights, Path(model.dir_path), imgsz=imgsz, opset=opset,
+    onnx_path = export_onnx(weights, model_dir, imgsz=imgsz, opset=opset,
                             dynamic=dynamic, nms=nms)
     check_onnx_model(onnx_path)
     log(f"model.onnx written to {onnx_path}, onnx.checker passed")
@@ -192,7 +197,7 @@ def run_export(db, job: Job) -> dict:
     db.rollback()
     db.expire_all()
     model = db.get(Model, model.id)
-    model.onnx_path = str(onnx_path)
+    model.onnx_path = settings.rel_data_path(onnx_path)
     model.parity_status = None if parity is None else ("passed" if parity.passed else "failed")
     model.parity_json = json.dumps(parity.to_dict()) if parity else None
     db.commit()
@@ -210,7 +215,7 @@ def run_predict_video(db, job: Job) -> dict:
     model = db.get(Model, params["model_id"])
     if model is None:
         raise RuntimeError(f"model {params.get('model_id')} no longer exists")
-    if not model.onnx_path or not Path(model.onnx_path).is_file():
+    if not model.onnx_path or not settings.data_path(model.onnx_path).is_file():
         raise RuntimeError(f"model {model.id} has no exported ONNX")
 
     src_path = Path(params["src_path"])
@@ -231,7 +236,7 @@ def run_predict_video(db, job: Job) -> dict:
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    detector = RuntimeOnnxDetector(Path(model.dir_path))
+    detector = RuntimeOnnxDetector(settings.data_path(model.dir_path))
     # mp4v is what OpenCV ships with everywhere (step 06 §3) — not the most efficient
     # codec, but the one that will not make you debug an FFmpeg build.
     writer = cv2.VideoWriter(str(out_video), cv2.VideoWriter_fourcc(*"mp4v"), fps,
@@ -291,7 +296,7 @@ def run_prelabel(db, job: Job) -> dict:
     conf = float(params.get("conf", DEFAULT_PRELABEL_CONF))
     limit = int(params.get("limit", 500))
 
-    detector = RuntimeOnnxDetector(Path(model.dir_path))
+    detector = RuntimeOnnxDetector(settings.data_path(model.dir_path))
 
     def read_image(rel_path: str):
         path = settings.images_dir / rel_path

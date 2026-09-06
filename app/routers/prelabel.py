@@ -3,12 +3,12 @@ See docs/steps/07-prelabel-loop.md."""
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db import get_db
 from app.models import Annotation, Image, Job, Model, Project
 from app.schemas import (
@@ -38,7 +38,7 @@ def _exported_model_in_project(db: Session, project_id: int, model_id: int) -> M
     model = db.get(Model, model_id)
     if not model or model.project_id != project_id:
         raise HTTPException(404, "model not found in this project")
-    if not model.onnx_path or not Path(model.onnx_path).is_file():
+    if not model.onnx_path or not settings.data_path(model.onnx_path).is_file():
         raise HTTPException(400, f"model {model_id} has no exported ONNX — run the "
                                   "step 05 export first")
     return model

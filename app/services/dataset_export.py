@@ -211,7 +211,7 @@ def export_dataset(db: Session, project: Project, val_pct: int = 20, force: bool
 
     dataset = Dataset(
         project_id=project.id,
-        dir_path=str(dataset_dir),
+        dir_path=settings.rel_data_path(dataset_dir),
         val_pct=val_pct,
         n_train=report.n_train,
         n_val=report.n_val,
@@ -224,13 +224,32 @@ def export_dataset(db: Session, project: Project, val_pct: int = 20, force: bool
     return ExportResult(dataset=dataset, path=str(dataset_dir), report=report)
 
 
+def materialise_data_yaml(dataset_dir: Path) -> Path:
+    """Step 09 §3: regenerate data.yaml at training start rather than trusting the one
+    written at export time. That file's `path:` key is an absolute filesystem path, and
+    the export that wrote it may have run in a different environment (conda on the Mac
+    vs. the Docker container's /app/data) than the one about to train — dataset_dir
+    itself is already resolved through settings.data_path() by the caller, so writing
+    `path: {dataset_dir}` here is always correct for wherever this process is running."""
+    manifest = json.loads((dataset_dir / "manifest.json").read_text())
+    data_yaml = {
+        "path": str(dataset_dir.resolve()),
+        "train": "images/train",
+        "val": "images/val",
+        "names": manifest["names"],
+    }
+    yaml_path = dataset_dir / "data.yaml"
+    yaml_path.write_text(yaml.safe_dump(data_yaml, sort_keys=False))
+    return yaml_path
+
+
 def export_coco(db: Session, project: Project, dataset: Dataset) -> dict:
     """Rebuild COCO JSON from the frozen YOLO files the dataset points to, rather than
     re-querying annotations — so it always matches the exact snapshot on disk, not
     whatever the DB looks like now. Generated on demand rather than stored (§8)."""
     manifest = json.loads(dataset.manifest_json)
     names = {int(i): name for i, name in manifest["names"].items()}
-    dataset_dir = Path(dataset.dir_path)
+    dataset_dir = settings.data_path(dataset.dir_path)
 
     coco_images: list[dict] = []
     coco_annotations: list[dict] = []

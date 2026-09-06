@@ -1,0 +1,14 @@
+data/
+.git/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+*.pt
+*.onnx
+.venv/
+.env
+tests/
+docs/
+README.md
+ARCHITECTURE.md
+environment.yml

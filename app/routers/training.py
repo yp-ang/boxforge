@@ -64,7 +64,7 @@ def start_training(project_id: int, payload: TrainRequest, db: Session = Depends
         if dataset is None or dataset.project_id != project.id:
             raise HTTPException(404, "dataset not found in this project")
 
-    if not (Path(dataset.dir_path) / "data.yaml").is_file():
+    if not (settings.data_path(dataset.dir_path) / "data.yaml").is_file():
         raise HTTPException(400, f"dataset {dataset.id} is missing data.yaml on disk")
 
     params = {"dataset_id": dataset.id, "config": payload.config.model_dump()}
@@ -194,7 +194,7 @@ def export_onnx_endpoint(model_id: int, payload: ExportOnnxRequest, db: Session 
     model = db.get(Model, model_id)
     if not model:
         raise HTTPException(404, "model not found")
-    if not (Path(model.dir_path) / "best.pt").is_file():
+    if not (settings.data_path(model.dir_path) / "best.pt").is_file():
         raise HTTPException(400, f"model {model_id} has no weights on disk")
 
     params = {"model_id": model.id, **payload.model_dump()}
@@ -213,7 +213,7 @@ def model_plot(model_id: int, name: str, db: Session = Depends(get_db)):
     model = db.get(Model, model_id)
     if not model or not model.run_dir:
         raise HTTPException(404, "model or run directory not found")
-    path = (Path(model.run_dir) / name).resolve()
+    path = (settings.data_path(model.run_dir) / name).resolve()
     if not path.is_relative_to(settings.runs_dir.resolve()):
         raise HTTPException(400, "path escape")
     if not path.is_file():

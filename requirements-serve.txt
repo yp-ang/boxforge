@@ -1,0 +1,15 @@
+# The default `docker compose up` image: everything the FastAPI app needs to serve the
+# UI, the annotation API, and onnxruntime inference. No torch, no ultralytics — see
+# requirements-train.txt and ARCHITECTURE §5.1/§9. Versions intentionally unpinned
+# beyond what correctness requires, matching environment.yml's conda path.
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0
+pydantic-settings
+jinja2
+pyyaml
+python-multipart
+numpy
+pillow
+opencv-python-headless
+onnxruntime

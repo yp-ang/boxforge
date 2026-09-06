@@ -33,5 +33,20 @@ class Settings(BaseSettings):
                   self.pretrained_dir, self.faces_dir):
             d.mkdir(parents=True, exist_ok=True)
 
+    def data_path(self, value: str) -> Path:
+        """Resolve a path stored in the DB (step 09 §3). New rows store paths relative
+        to data_dir, so the same row resolves correctly whether this process is conda
+        on a Mac or the Docker container mounting data/ at /app/data — the value that
+        differs between environments is data_dir, not the suffix under it. A legacy
+        absolute path (written before this existed) is honoured as-is; it only breaks
+        if you move data/ to a different absolute location without going through the
+        bind mount, which is the one thing this whole scheme exists to avoid."""
+        p = Path(value)
+        return p if p.is_absolute() else (self.data_dir / p)
+
+    def rel_data_path(self, path: Path) -> str:
+        """Inverse of data_path() — call this right before storing a path in the DB."""
+        return str(Path(path).resolve().relative_to(self.data_dir.resolve()))
+
 
 settings = Settings()
