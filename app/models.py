@@ -120,6 +120,12 @@ class Model(Base):
     is_active: Mapped[bool] = mapped_column(default=False)         # the one step 06/07 default to
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
+    # step 05: filled in once export-onnx has run. parity_status is what the UI flags —
+    # None means "never exported", so a failed parity check is never silently listed as fine.
+    onnx_path: Mapped[Optional[str]] = mapped_column(default=None)
+    parity_status: Mapped[Optional[str]] = mapped_column(default=None)   # passed | failed
+    parity_json: Mapped[Optional[str]] = mapped_column(Text, default=None)
+
 
 class FaceIdentity(Base):
     __tablename__ = "face_identities"

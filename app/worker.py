@@ -16,7 +16,17 @@ from pathlib import Path
 from app.config import settings
 from app.db import SessionLocal, init_db
 from app.models import Dataset, Job, Model, Project
+from app.services.exporter import (
+    OnnxDetector,
+    TorchDetector,
+    build_export_metadata,
+    check_onnx_model,
+    export_onnx,
+    parity_check,
+)
 from app.services.trainer import TrainConfig, UltralyticsTrainer, write_model_folder
+
+PARITY_SAMPLE_IMAGES = 5
 
 
 def log(message: str) -> None:
@@ -101,7 +111,92 @@ def run_train(db, job: Job) -> dict:
             "weights": str(model_dir / "best.pt"), "metrics": result.metrics}
 
 
-HANDLERS = {"train": run_train}
+def _pick_parity_samples(dataset: Dataset | None, n: int) -> list[Path]:
+    """Prefer val images — they were never trained on, so a pass there is the stronger
+    claim — and fall back to train images for a dataset too small to have a val split."""
+    if dataset is None:
+        return []
+    dataset_dir = Path(dataset.dir_path)
+    for split in ("val", "train"):
+        images = sorted((dataset_dir / "images" / split).glob("*"))
+        if images:
+            return images[:n]
+    return []
+
+
+def run_export(db, job: Job) -> dict:
+    params = json.loads(job.params_json or "{}")
+    model = db.get(Model, params["model_id"])
+    if model is None:
+        raise RuntimeError(f"model {params.get('model_id')} no longer exists")
+    project = db.get(Project, model.project_id)
+
+    weights = Path(model.dir_path) / "best.pt"
+    if not weights.is_file():
+        raise RuntimeError(f"model {model.id} has no weights on disk at {weights}")
+
+    metadata_path = Path(model.dir_path) / "metadata.json"
+    existing = json.loads(metadata_path.read_text()) if metadata_path.is_file() else {}
+
+    imgsz = params.get("imgsz") or existing.get("imgsz") or settings.default_imgsz
+    opset = params.get("opset", 12)
+    dynamic = params.get("dynamic", False)
+    nms = params.get("nms", False)
+
+    log(f"exporting model {model.id}: weights={weights} imgsz={imgsz} opset={opset} "
+        f"dynamic={dynamic} nms={nms}")
+    onnx_path = export_onnx(weights, Path(model.dir_path), imgsz=imgsz, opset=opset,
+                            dynamic=dynamic, nms=nms)
+    check_onnx_model(onnx_path)
+    log(f"model.onnx written to {onnx_path}, onnx.checker passed")
+
+    dataset = db.get(Dataset, model.dataset_id) if model.dataset_id else None
+    samples = _pick_parity_samples(dataset, PARITY_SAMPLE_IMAGES)
+    parity = None
+    if samples:
+        log(f"running parity check on {len(samples)} sample image(s)")
+        parity = parity_check(TorchDetector(weights, imgsz), OnnxDetector(onnx_path), samples)
+        log(f"parity check {'PASSED' if parity.passed else 'FAILED'}")
+        if not parity.passed:
+            for img_result in parity.images:
+                if not img_result.passed:
+                    log(f"  {img_result.image}: {img_result.detail}")
+    else:
+        log("no dataset images available for a parity check — skipping")
+
+    classes = json.loads(model.classes_json)
+    metrics = json.loads(model.metrics_json or "{}")
+    metadata = {
+        **existing,
+        **build_export_metadata(
+            name=model.name,
+            task=project.task if project else "detect",
+            imgsz=imgsz, opset=opset, nms=nms,
+            classes=classes, metrics=metrics,
+            trained_at=existing.get("trained_at", datetime.utcnow().isoformat()),
+            dataset=f"{project.slug}/{Path(dataset.dir_path).name}" if project and dataset
+                    else existing.get("dataset"),
+            framework_version=existing.get("framework_version", "ultralytics 8.x"),
+            parity=parity,
+        ),
+    }
+    metadata_path.write_text(json.dumps(metadata, indent=2))
+
+    # Same reasoning as run_train above: drop the read transaction the export just held
+    # open before writing, and re-fetch rather than trust the identity-mapped copy.
+    db.rollback()
+    db.expire_all()
+    model = db.get(Model, model.id)
+    model.onnx_path = str(onnx_path)
+    model.parity_status = None if parity is None else ("passed" if parity.passed else "failed")
+    model.parity_json = json.dumps(parity.to_dict()) if parity else None
+    db.commit()
+
+    return {"model_id": model.id, "onnx_path": str(onnx_path),
+            "parity_status": model.parity_status}
+
+
+HANDLERS = {"train": run_train, "export": run_export}
 
 
 def main(argv: list[str]) -> int:

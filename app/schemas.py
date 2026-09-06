@@ -175,6 +175,16 @@ class ModelOut(BaseModel):
     metrics_json: str | None = None
     is_active: bool
     created_at: datetime
+    onnx_path: str | None = None
+    parity_status: str | None = None
+    parity_json: str | None = None
+
+
+class ExportOnnxRequest(BaseModel):
+    imgsz: int | None = None                        # defaults to the model's training imgsz
+    opset: int = Field(12, ge=7, le=20)
+    dynamic: bool = False
+    nms: bool = False
 
 
 class AugmentPreviewItem(BaseModel):

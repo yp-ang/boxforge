@@ -201,15 +201,59 @@ async function loadModels() {
       tr.appendChild(td);
     }
 
-    const plotsTd = document.createElement("td");
+    const onnxTd = document.createElement("td");
+    onnxTd.appendChild(onnxStatusBadge(model));
+    tr.appendChild(onnxTd);
+
+    const actionsTd = document.createElement("td");
     const plotsBtn = document.createElement("button");
+    plotsBtn.type = "button";
     plotsBtn.textContent = "plots";
     plotsBtn.addEventListener("click", () => showPlots(model));
-    plotsTd.appendChild(plotsBtn);
-    tr.appendChild(plotsTd);
+    actionsTd.appendChild(plotsBtn);
+
+    const exportBtnEl = document.createElement("button");
+    exportBtnEl.type = "button";
+    exportBtnEl.textContent = model.onnx_path ? "re-export" : "export to ONNX";
+    exportBtnEl.addEventListener("click", () => exportToOnnx(model, exportBtnEl));
+    actionsTd.appendChild(exportBtnEl);
+
+    tr.appendChild(actionsTd);
 
     modelRows.appendChild(tr);
   }
+}
+
+function onnxStatusBadge(model) {
+  const span = document.createElement("span");
+  span.className = "onnx-status";
+  if (model.parity_status === "passed") {
+    span.classList.add("onnx-passed");
+    span.textContent = "✓ parity ok";
+  } else if (model.parity_status === "failed") {
+    span.classList.add("onnx-failed");
+    span.textContent = "✗ parity failed";
+  } else if (model.onnx_path) {
+    span.classList.add("onnx-none");
+    span.textContent = "exported (no parity)";
+  } else {
+    span.classList.add("onnx-none");
+    span.textContent = "not exported";
+  }
+  return span;
+}
+
+async function exportToOnnx(model, button) {
+  button.disabled = true;
+  showError("");
+  const res = await fetch(`/api/models/${model.id}/export-onnx`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  button.disabled = false;
+  if (!res.ok) return showError((await res.json()).detail || "could not start export");
+  attachToJob((await res.json()).id);
 }
 
 function showPlots(model) {

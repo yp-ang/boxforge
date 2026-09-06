@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db import get_db
 from app.models import Dataset, Job, Model, Project
-from app.schemas import AugmentPreviewOut, JobOut, ModelOut, TrainRequest
+from app.schemas import AugmentPreviewOut, ExportOnnxRequest, JobOut, ModelOut, TrainRequest
 from app.services.augment_preview import build_augment_preview
 from app.services.jobs import JobConflict, cancel_job, job_status, reconcile_jobs, start_job
 from app.services.trainer import KNOWN_MODELS
@@ -184,6 +184,24 @@ def activate_model(model_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(model)
     return model
+
+
+@router.post("/api/models/{model_id}/export-onnx", response_model=JobOut)
+def export_onnx_endpoint(model_id: int, payload: ExportOnnxRequest, db: Session = Depends(get_db)):
+    """Step 05: turn best.pt into model.onnx + parity-checked metadata.json, in the same
+    model folder training already wrote. Runs as a job so its progress streams like a
+    training run does."""
+    model = db.get(Model, model_id)
+    if not model:
+        raise HTTPException(404, "model not found")
+    if not (Path(model.dir_path) / "best.pt").is_file():
+        raise HTTPException(400, f"model {model_id} has no weights on disk")
+
+    params = {"model_id": model.id, **payload.model_dump()}
+    try:
+        return start_job(db, "export", model.project_id, params)
+    except JobConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @router.get("/api/models/{model_id}/plots/{name}")

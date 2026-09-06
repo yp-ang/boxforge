@@ -2,6 +2,7 @@ import json
 import os
 import signal
 import time
+from pathlib import Path
 
 import pytest
 
@@ -355,6 +356,50 @@ def test_activating_a_model_clears_the_others(client, db_session):
     # Scoped per project — activating here must not disturb another project's choice.
     db_session.refresh(elsewhere)
     assert elsewhere.is_active is True
+
+
+def test_export_endpoint_requires_weights_on_disk(client, db_session):
+    project = make_project(db_session)
+    model = make_model(db_session, project, "run0")     # dir_path has no best.pt
+    resp = client.post(f"/api/models/{model.id}/export-onnx", json={})
+    assert resp.status_code == 400
+
+
+def test_export_endpoint_404s_on_an_unknown_model(client, db_session):
+    resp = client.post("/api/models/999/export-onnx", json={})
+    assert resp.status_code == 404
+
+
+def test_export_endpoint_starts_a_job(client, db_session, fake_worker):
+    project = make_project(db_session)
+    model = make_model(db_session, project, "run0")
+    Path(model.dir_path).mkdir(parents=True, exist_ok=True)
+    (Path(model.dir_path) / "best.pt").write_bytes(b"fake")
+
+    resp = client.post(f"/api/models/{model.id}/export-onnx", json={"opset": 13})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["type"] == "export"
+    params = json.loads(body["params_json"])
+    assert params == {"model_id": model.id, "imgsz": None, "opset": 13,
+                      "dynamic": False, "nms": False}
+
+    client.post(f"/api/jobs/{body['id']}/cancel")
+
+
+def test_export_endpoint_refuses_while_a_job_is_already_running(client, db_session, fake_worker):
+    project = make_project(db_session)
+    model = make_model(db_session, project, "run0")
+    Path(model.dir_path).mkdir(parents=True, exist_ok=True)
+    (Path(model.dir_path) / "best.pt").write_bytes(b"fake")
+
+    first = client.post(f"/api/models/{model.id}/export-onnx", json={})
+    assert first.status_code == 200
+
+    second = client.post(f"/api/models/{model.id}/export-onnx", json={})
+    assert second.status_code == 409
+
+    client.post(f"/api/jobs/{first.json()['id']}/cancel")
 
 
 def test_model_plot_endpoint_rejects_path_escape(client, db_session):

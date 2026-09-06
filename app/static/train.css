@@ -20,3 +20,6 @@ body.train-body { max-width: 60em; }
 .metric-key p { margin: 0.4em 0; }
 .status-running { color: #b06a00; } .status-done { color: #1f7a1f; }
 .status-failed, .status-cancelled { color: #c0271a; }
+.onnx-status { font-size: 0.85em; }
+.onnx-passed { color: #1f7a1f; } .onnx-failed { color: #c0271a; font-weight: 600; }
+.onnx-none { color: #999; }
