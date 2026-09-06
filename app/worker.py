@@ -13,6 +13,8 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
+import cv2
+
 from app.config import settings
 from app.db import SessionLocal, init_db
 from app.models import Dataset, Job, Model, Project
@@ -24,6 +26,8 @@ from app.services.exporter import (
     export_onnx,
     parity_check,
 )
+from app.services.runtime import OnnxDetector as RuntimeOnnxDetector
+from app.services.runtime import draw_detections
 from app.services.trainer import TrainConfig, UltralyticsTrainer, write_model_folder
 
 PARITY_SAMPLE_IMAGES = 5
@@ -196,7 +200,78 @@ def run_export(db, job: Job) -> dict:
             "parity_status": model.parity_status}
 
 
-HANDLERS = {"train": run_train, "export": run_export}
+def run_predict_video(db, job: Job) -> dict:
+    """Step 06: annotate an uploaded video against the exported ONNX model. Runs as a
+    job for the same reason training does — a 30s clip at full resolution takes long
+    enough that the request would otherwise time out, and this reuses the SSE log
+    stream and cancel button step 04 already built."""
+    params = json.loads(job.params_json or "{}")
+    model = db.get(Model, params["model_id"])
+    if model is None:
+        raise RuntimeError(f"model {params.get('model_id')} no longer exists")
+    if not model.onnx_path or not Path(model.onnx_path).is_file():
+        raise RuntimeError(f"model {model.id} has no exported ONNX")
+
+    src_path = Path(params["src_path"])
+    stride = max(1, int(params.get("stride", 3)))
+    conf = float(params.get("conf", 0.25))
+    iou = float(params.get("iou", 0.45))
+
+    out_dir = settings.runs_dir / str(job.id) / "predict"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_video = out_dir / "annotated.mp4"
+    out_json = out_dir / "detections.json"
+
+    cap = cv2.VideoCapture(str(src_path))
+    if not cap.isOpened():
+        raise RuntimeError(f"could not open uploaded video: {src_path}")
+    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    detector = RuntimeOnnxDetector(Path(model.dir_path))
+    # mp4v is what OpenCV ships with everywhere (step 06 §3) — not the most efficient
+    # codec, but the one that will not make you debug an FFmpeg build.
+    writer = cv2.VideoWriter(str(out_video), cv2.VideoWriter_fourcc(*"mp4v"), fps,
+                             (width, height))
+
+    log(f"predicting {src_path.name}: {total} frames @ {fps:.1f}fps, stride={stride}, "
+        f"conf={conf}, iou={iou}")
+
+    per_frame: list[dict] = []
+    last_dets: list = []
+    idx = 0
+    try:
+        while True:
+            ok, frame = cap.read()
+            if not ok:
+                break
+            # Infer every stride-th frame and reuse the last boxes in between — 3x
+            # faster and visually identical for review purposes (step 06 §3).
+            if idx % stride == 0:
+                last_dets = detector.predict(frame, conf=conf, iou=iou)
+                per_frame.append({"frame": idx, "detections": [d.as_dict() for d in last_dets]})
+            draw_detections(frame, last_dets)
+            writer.write(frame)
+            idx += 1
+            if idx % 100 == 0:
+                log(f"  frame {idx}/{total}")
+    finally:
+        cap.release()
+        writer.release()
+
+    out_json.write_text(json.dumps(
+        {"fps": fps, "width": width, "height": height, "stride": stride, "frames": per_frame},
+        indent=2,
+    ))
+    src_path.unlink(missing_ok=True)   # scratch upload, not part of the model folder
+
+    log(f"annotated video written to {out_video} ({idx} frames)")
+    return {"model_id": model.id, "video": str(out_video), "frames": idx}
+
+
+HANDLERS = {"train": run_train, "export": run_export, "predict_video": run_predict_video}
 
 
 def main(argv: list[str]) -> int:

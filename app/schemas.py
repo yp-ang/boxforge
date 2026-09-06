@@ -187,6 +187,25 @@ class ExportOnnxRequest(BaseModel):
     nms: bool = False
 
 
+class DetectionOut(BaseModel):
+    cls: int
+    label: str
+    score: float
+    xyxy: list[float]     # x1,y1,x2,y2 in original-image pixel space
+
+
+class PredictImageOut(BaseModel):
+    width: int
+    height: int
+    image: str                          # data: URI — the uploaded image, re-encoded
+    detections: list[DetectionOut]      # run at a low conf floor; the UI filters client-side
+
+
+class WebcamCapabilityOut(BaseModel):
+    server_webcam: bool
+    note: str | None = None
+
+
 class AugmentPreviewItem(BaseModel):
     image_id: int
     original: str        # data: URI

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db import SessionLocal, get_db, init_db
 from app.models import Project
-from app.routers import annotations, datasets, images, labels, projects, training
+from app.routers import annotations, datasets, images, inference, labels, projects, training
 from app.services.jobs import reconcile_jobs
 
 
@@ -33,6 +33,7 @@ app.include_router(images.router)
 app.include_router(annotations.router)
 app.include_router(datasets.router)
 app.include_router(training.router)
+app.include_router(inference.router)
 
 
 @app.get("/health")
@@ -58,3 +59,11 @@ def train_page(request: Request, project_id: int, db: Session = Depends(get_db))
     if not project:
         raise HTTPException(404, "project not found")
     return templates.TemplateResponse(request, "train.html", {"project": project})
+
+
+@app.get("/verify/{project_id}")
+def verify_page(request: Request, project_id: int, db: Session = Depends(get_db)):
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, "project not found")
+    return templates.TemplateResponse(request, "verify.html", {"project": project})
